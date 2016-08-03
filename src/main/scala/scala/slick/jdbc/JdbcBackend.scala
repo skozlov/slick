@@ -437,7 +437,31 @@ trait JdbcBackend extends DatabaseComponent {
       }
     }
 
-    override def futureWithTransaction[T](f: => Future[T]): Future[T] = ???
+    override def futureWithTransaction[T](f: => Future[T]): Future[T] = {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      Future {
+        val newTransaction = !inTransaction
+        if(newTransaction){
+          conn.setAutoCommit(false)
+          inTransaction = true
+          doRollback = false
+        }
+        newTransaction
+      } flatMap {newTransaction =>
+        if(!newTransaction) f else {
+          val invokeAndCommit: Future[T] = f map { result =>
+            if(doRollback) conn.rollback() else conn.commit()
+            result
+          }
+          invokeAndCommit onComplete {res =>
+            if(res.isFailure) conn.rollback()
+            conn.setAutoCommit(false)
+            inTransaction = false
+          }
+          invokeAndCommit
+        }
+      }
+    }
   }
 
   /**
