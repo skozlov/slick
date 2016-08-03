@@ -2,6 +2,7 @@ package scala.slick.memory
 
 import java.util.concurrent.atomic.AtomicLong
 import scala.collection.mutable.{ArrayBuffer, HashMap, HashSet}
+import scala.concurrent.Future
 import scala.slick.SlickException
 import scala.slick.ast._
 import scala.slick.backend.DatabaseComponent
@@ -60,6 +61,10 @@ trait HeapBackend extends DatabaseComponent with Logging {
 
     def withTransaction[T](f: => T) =
       throw new SlickException("HeapBackend does not currently support transactions")
+
+    override def futureWithTransaction[T](f: => Future[T]): Future[T] = {
+      throw new SlickException("HeapBackend does not currently support transactions")
+    }
   }
 
   type Row = IndexedSeq[Any]

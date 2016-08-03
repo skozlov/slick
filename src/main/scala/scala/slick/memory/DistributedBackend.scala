@@ -1,5 +1,6 @@
 package scala.slick.memory
 
+import scala.concurrent.Future
 import scala.slick.SlickException
 import scala.slick.backend.DatabaseComponent
 import scala.slick.util.Logging
@@ -46,6 +47,10 @@ trait DistributedBackend extends DatabaseComponent with Logging {
 
     def withTransaction[T](f: => T) =
       throw new SlickException("DistributedBackend does not currently support transactions")
+
+    override def futureWithTransaction[T](f: => Future[T]): Future[T] = {
+      throw new SlickException("DistributedBackend does not currently support transactions")
+    }
   }
 }
 

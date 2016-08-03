@@ -1,5 +1,6 @@
 package scala.slick.jdbc
 
+import scala.concurrent.Future
 import scala.language.reflectiveCalls
 import scala.slick.backend.DatabaseComponent
 import scala.slick.SlickException
@@ -246,6 +247,7 @@ trait JdbcBackend extends DatabaseComponent {
       def close() = self.close()
       def rollback() = self.rollback()
       def withTransaction[T](f: => T) = self.withTransaction(f)
+      override def futureWithTransaction[T](f: => Future[T]): Future[T] = self.futureWithTransaction(f)
     }
 
     protected def loggingStatement(st: Statement): Statement =
@@ -434,6 +436,8 @@ trait JdbcBackend extends DatabaseComponent {
         inTransaction = false
       }
     }
+
+    override def futureWithTransaction[T](f: => Future[T]): Future[T] = ???
   }
 
   /**

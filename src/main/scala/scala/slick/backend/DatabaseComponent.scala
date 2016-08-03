@@ -1,5 +1,6 @@
 package scala.slick.backend
 
+import scala.concurrent.Future
 import scala.util.DynamicVariable
 import scala.slick.SlickException
 import java.io.Closeable
@@ -90,6 +91,8 @@ trait DatabaseComponent { self =>
       * or the session's `rollback()` method is called, the transaction is rolled back,
       * otherwise it is committed when the function returns. */
     def withTransaction[T](f: => T): T
+
+    def futureWithTransaction[T](f: => Future[T]): Future[T]
 
     /** Use this Session as the `dynamicSession` for running the supplied thunk. */
     def asDynamicSession[T](f: => T): T = withDynamicSession[T](this.asInstanceOf[Session])(f)
