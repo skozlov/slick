@@ -35,5 +35,24 @@ class UnmanagedSession(val conn: Connection) extends JdbcBackend.SessionDef {
     } finally inTransaction = false
   }
 
-  override def futureWithTransaction[T](f: => Future[T]): Future[T] = ???
+  override def futureWithTransaction[T](f: => Future[T]): Future[T] = {
+    import scala.concurrent.ExecutionContext.Implicits.global
+    Future {
+      val newTransaction = !inTransaction
+      if(newTransaction){
+        inTransaction = true
+        doRollback = false
+      }
+      newTransaction
+    } flatMap {newTransaction =>
+      if(!newTransaction) f else {
+        val invoke: Future[T] = f map { result =>
+          if (doRollback) performRollback()
+          result
+        }
+        invoke onComplete {_ => inTransaction = false}
+        invoke
+      }
+    }
+  }
 }
