@@ -46,12 +46,16 @@ trait DatabaseComponent { self =>
 
     def futureWithSession[T](f: Session => Future[T])(implicit executor: ExecutionContext): Future[T] = {
       Future {createSession()} flatMap {session =>
-        val action = f(session)
-        action onComplete {
-          case Success(_) => session.close()
-          case Failure(_) => try session.close() catch { case _: Throwable => }
-        }
-        action
+        f(session) transform (
+          {result =>
+            session.close()
+            result
+          },
+          {e =>
+            try session.close() catch { case _: Throwable => }
+            e
+          }
+        )
       }
     }
 

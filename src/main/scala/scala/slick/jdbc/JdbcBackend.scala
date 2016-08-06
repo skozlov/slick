@@ -447,18 +447,20 @@ trait JdbcBackend extends DatabaseComponent {
         }
         newTransaction
       } flatMap {newTransaction =>
-        if(!newTransaction) f else {
-          val invokeAndCommit: Future[T] = f map { result =>
+        if(!newTransaction) f else f transform (
+          {result =>
             if(doRollback) conn.rollback() else conn.commit()
-            result
-          }
-          invokeAndCommit onComplete {res =>
-            if(res.isFailure) conn.rollback()
             conn.setAutoCommit(false)
             inTransaction = false
+            result
+          },
+          {e =>
+            conn.rollback()
+            conn.setAutoCommit(false)
+            inTransaction = false
+            e
           }
-          invokeAndCommit
-        }
+        )
       }
     }
   }

@@ -44,14 +44,17 @@ class UnmanagedSession(val conn: Connection) extends JdbcBackend.SessionDef {
       }
       newTransaction
     } flatMap {newTransaction =>
-      if(!newTransaction) f else {
-        val invoke: Future[T] = f map { result =>
+      if(!newTransaction) f else f transform (
+        {result =>
           if (doRollback) performRollback()
+          inTransaction = false
           result
+        },
+        {e =>
+          inTransaction = false
+          e
         }
-        invoke onComplete {_ => inTransaction = false}
-        invoke
-      }
+      )
     }
   }
 }
