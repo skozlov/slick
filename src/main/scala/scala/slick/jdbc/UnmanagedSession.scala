@@ -1,7 +1,7 @@
 package scala.slick.jdbc
 
 import java.sql.Connection
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.slick.SlickException
 
 /** A JDBC Session which is not managed by Slick. You can use this to wrap an
@@ -35,8 +35,7 @@ class UnmanagedSession(val conn: Connection) extends JdbcBackend.SessionDef {
     } finally inTransaction = false
   }
 
-  override def futureWithTransaction[T](f: => Future[T]): Future[T] = {
-    import scala.concurrent.ExecutionContext.Implicits.global
+  override def futureWithTransaction[T](f: => Future[T])(implicit executor: ExecutionContext): Future[T] = {
     Future {
       val newTransaction = !inTransaction
       if(newTransaction){

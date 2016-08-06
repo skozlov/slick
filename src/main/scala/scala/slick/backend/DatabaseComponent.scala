@@ -1,6 +1,6 @@
 package scala.slick.backend
 
-import scala.concurrent.Future
+import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try, DynamicVariable}
 import scala.slick.SlickException
 import java.io.Closeable
@@ -44,8 +44,7 @@ trait DatabaseComponent { self =>
       }
     }
 
-    def futureWithSession[T](f: Session => Future[T]): Future[T] = {
-      import scala.concurrent.ExecutionContext.Implicits.global
+    def futureWithSession[T](f: Session => Future[T])(implicit executor: ExecutionContext): Future[T] = {
       Future {createSession()} flatMap {session =>
         val action = f(session)
         action onComplete {
@@ -66,9 +65,8 @@ trait DatabaseComponent { self =>
     /** Run the supplied function with a new session in a transaction and automatically close the session at the end. */
     def withTransaction[T](f: Session => T): T = withSession { s => s.withTransaction(f(s)) }
 
-    def futureWithTransaction[T](f: Session => Future[T]): Future[T] = futureWithSession {
-      s => s futureWithTransaction {f(s)}
-    }
+    def futureWithTransaction[T](f: Session => Future[T])(implicit executor: ExecutionContext): Future[T] =
+      futureWithSession { s => s futureWithTransaction {f(s)}}
 
     /** Run the supplied thunk with a new session in a transaction and
       * automatically close the session at the end.
@@ -108,7 +106,7 @@ trait DatabaseComponent { self =>
       * otherwise it is committed when the function returns. */
     def withTransaction[T](f: => T): T
 
-    def futureWithTransaction[T](f: => Future[T]): Future[T]
+    def futureWithTransaction[T](f: => Future[T])(implicit executor: ExecutionContext): Future[T]
 
     /** Use this Session as the `dynamicSession` for running the supplied thunk. */
     def asDynamicSession[T](f: => T): T = withDynamicSession[T](this.asInstanceOf[Session])(f)
