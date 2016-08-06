@@ -1,7 +1,7 @@
 package scala.slick.backend
 
 import scala.concurrent.Future
-import scala.util.DynamicVariable
+import scala.util.{Failure, Success, Try, DynamicVariable}
 import scala.slick.SlickException
 import java.io.Closeable
 import scala.util.control.NonFatal
@@ -41,6 +41,18 @@ trait DatabaseComponent { self =>
           // f(s) threw an exception, so don't replace it with an Exception from close()
           try s.close() catch { case _: Throwable => }
         }
+      }
+    }
+
+    def futureWithSession[T](f: Session => Future[T]): Future[T] = {
+      import scala.concurrent.ExecutionContext.Implicits.global
+      Future {createSession()} flatMap {session =>
+        val action = f(session)
+        action onComplete {
+          case Success(_) => session.close()
+          case Failure(_) => try session.close() catch { case _: Throwable => }
+        }
+        action
       }
     }
 
