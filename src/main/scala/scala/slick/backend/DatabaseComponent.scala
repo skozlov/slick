@@ -66,6 +66,10 @@ trait DatabaseComponent { self =>
     /** Run the supplied function with a new session in a transaction and automatically close the session at the end. */
     def withTransaction[T](f: Session => T): T = withSession { s => s.withTransaction(f(s)) }
 
+    def futureWithTransaction[T](f: Session => Future[T]): Future[T] = futureWithSession {
+      s => s futureWithTransaction {f(s)}
+    }
+
     /** Run the supplied thunk with a new session in a transaction and
       * automatically close the session at the end.
       * The session is stored in a dynamic (inheritable thread-local) variable
